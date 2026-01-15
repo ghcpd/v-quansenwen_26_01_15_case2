@@ -4,19 +4,19 @@
 
 DriftFlow is a minimal workflow engine used by multiple internal teams. It provides:
 
-- deterministic execution order
-- retry with exponential backoff
-- pluggable storage backends (sqlite, memory)
-- audit logging for every step
+- deterministic ordering based on priority then name
+- bounded attempts per step (no exponential backoff)
+- append-only JSON file storage for audit events
+- opt-in audit logging (via the `audit` flag)
 
 ## Execution model
 
-Workflows are executed step-by-step. Steps are executed in FIFO order and retries are applied per step. Optional steps are still retried to preserve deterministic behavior.
+Steps are materialized from the config, sorted by `priority` (higher first) and `name`, then executed. Non-optional steps respect `max_attempts` (default 1) and stop the workflow on the first failure. Optional steps always run once and do not block later steps even when they fail. A step with an unknown `action` raises and is recorded as a failed result.
 
 ## Storage
 
-The storage layer persists audit events and workflow results. SQLite is the default backend, but an in-memory backend is available for tests.
+The storage layer currently persists audit events as JSON lines in a single file path provided by config. The path is created if missing. There is no alternative backend in the current implementation.
 
-## Backward compatibility
+## Compatibility
 
-The `retries` field is preserved for backward compatibility with older configs.
+The historical `retries` field is no longer consumed; use `max_attempts` to control retry attempts.
