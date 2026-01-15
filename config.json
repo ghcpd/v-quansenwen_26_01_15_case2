@@ -1,0 +1,29 @@
+{
+  "name": "demo",
+  "steps": [
+    {
+      "name": "fetch",
+      "action": "echo",
+      "input": "hello"
+    },
+    {
+      "name": "transform",
+      "action": "upper",
+      "input": "world"
+    },
+    {
+      "name": "reverse_it",
+      "action": "reverse",
+      "input": "abc"
+    }
+  ],
+  "flags": {
+    "audit": true
+  },
+  "storage": {
+    "type": "json",
+    "path": "./driftflow.audit.json"
+  },
+  "max_attempts": 3,
+  "timeout_seconds": 10
+}
