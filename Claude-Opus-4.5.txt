@@ -1,0 +1,250 @@
+User: You are given a small Python repository where the documentation has drifted from the real implementation over time. Your job is to “fix the outdated documentation” so that a new contributor can follow the docs and get the same behavior the code actually provides today.
+
+Do not assume the docs are correct; treat the code as the source of truth unless you find an actual bug that prevents the project from running.
+
+**Scope**
+- Update project documentation to accurately describe current behavior.
+- Update or replace outdated tests so the test suite matches current behavior and can be run with minimal setup.
+- Keep runtime behavior changes to a minimum; only change code if you must to make the project executable or to fix an obvious defect (if you do, explain why).
+
+**Hard constraints**
+- Do NOT add heavy dependencies. Prefer standard library solutions. If you keep any non-stdlib test runner, you must document it explicitly.
+- Do NOT “paper over” mismatches by removing documentation; update it to be correct and useful.
+
+**What to do**
+1. Read the docs and code, then write a short “Mismatch Report” in your response:
+   - Bullet list of each documentation claim that doesn’t match current behavior.
+   - For each item, name the doc location (e.g., README.md, CONFIG.md, DESIGN.md) and the implementation location (e.g., src/config.py, src/workflow.py, src/flags.py, src/cli.py).
+2. Update documentation so it matches the actual implementation:
+   - Fix the quick start to use the real config format and real CLI invocation/output.
+   - Ensure configuration keys, defaults, environment variables, feature-flag semantics, ordering rules, failure/stop behavior, and audit storage backend are all documented accurately.
+   - Add a short “Troubleshooting / Common gotchas” section for the most likely confusion points.
+3. Make running + verifying the repo straightforward:
+   - Provide (or update) an example config file in the repo root (e.g., `config.json`) that actually works with the current loader.
+   - Ensure the documented run command works on a clean machine with Python installed.
+4. Fix tests to be aligned and runnable with minimal friction:
+   - If tests currently assume old behavior, update them to assert current behavior.
+   - Prefer `unittest` (stdlib) so `python -m unittest` works without installing anything.
+   - If you choose not to use `unittest`, document the exact install + run steps in README.md.
+
+**Deliverables**
+- Edited files in-place (docs + tests, and only necessary code changes).
+- In your final response, include:
+  - “Mismatch Report” (bullets)
+  - “What I changed” (bullets)
+  - “How to run” commands (copy/paste)
+  - “How to test” commands (copy/paste)
+
+**Validation (you must make these commands succeed)**
+- Run the CLI with your example config:
+  - `python -m src.cli --config ./config.json`
+- Run the tests:
+  - `python -m unittest`
+
+**Notes**
+- Don’t try to restore the old promised behavior by rewriting the engine unless you find a true bug; the primary goal is accurate, current documentation.
+- If anything is genuinely ambiguous (multiple plausible intended behaviors), ask a clarifying question **once**, propose a default, and proceed with that default while clearly stating it.
+
+GitHub Copilot: Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/README.md)
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/CONFIG.md)
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/DESIGN.md)
+
+Now let me read all the source code files to understand the actual implementation: 
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/src/config.py)
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/src/cli.py)
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/src/workflow.py)
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/src/flags.py)
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/src/storage.py)
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/src/api.py)
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/src/__init__.py)
+
+Now let me read the test files: 
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/tests/test_flags.py)
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/tests/test_workflow.py)
+
+Now I have a complete picture. Let me verify if there's a __init__.py file needed for unittest discovery: 
+
+Read [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/tests)
+
+I now have all the context I need. Let me analyze the mismatches and then make all the necessary edits.
+
+## Mismatch Report
+
+Based on my analysis, here are the documentation vs. implementation mismatches:
+
+| # | Documentation Claim | Actual Behavior | Doc Location | Code Location |
+|---|---------------------|-----------------|--------------|---------------|
+| 1 | Config format is YAML | Config is **JSON** only | README.md, CONFIG.md | config.py (uses `json.load`) |
+| 2 | Default `retries: 3` | Default `max_attempts: 1` (field renamed too) | README.md, CONFIG.md | config.py `DEFAULT_CONFIG` |
+| 3 | Feature flags are **enabled by default** | Flags are **disabled by default** (returns `False` if not set) | README.md, CONFIG.md | flags.py `is_enabled()` |
+| 4 | Storage backend is SQLite | Storage is **JSON file** (`JsonFileStorage`) | README.md, CONFIG.md, DESIGN.md | src/storage.py, config.py |
+| 5 | Storage path default `./driftflow.db` | Default path is `./driftflow.audit.json` | CONFIG.md | config.py `DEFAULT_CONFIG` |
+| 6 | `DRIFTFLOW_TIMEOUT` env var | Actual env var is `WORKFLOW_TIMEOUT_SECONDS` | README.md, CONFIG.md | config.py |
+| 7 | `DRIFTFLOW_FLAGS` sets **enabled** flags | Actually sets flags to **disabled** (False) | CONFIG.md | config.py |
+| 8 | Steps run in FIFO order | Steps sorted by **priority (desc), then name (asc)** | README.md, CONFIG.md, DESIGN.md | workflow.py `run()` |
+| 9 | Failed steps do not stop workflow | Non-optional failed steps **stop** the workflow | README.md, CONFIG.md | workflow.py `run()` |
+| 10 | Field `timeoutSeconds` | Actual field is `timeout_seconds` | CONFIG.md | config.py |
+| 11 | Default timeout is 15 | Default timeout is **10** | CONFIG.md | config.py |
+| 12 | CLI output format `OK fetch => hello` | Actual output: `OK fetch: hello` (colon not arrow) | README.md | cli.py |
+| 13 | API returns `result["status"]` being "ok" | Correct, but example uses YAML path | README.md | api.py |
+| 14 | Step `optional` field undocumented behavior | Optional steps skip retries and don't stop workflow | CONFIG.md | workflow.py |
+| 15 | Step `priority` field not documented | Priority field exists and affects ordering | - | workflow.py |
+| 16 | Tests use pytest fixtures (`tmp_path`) | Need to work with unittest | tests/ | tests/ |
+| 17 | Test asserts flags enabled by default | Flags are actually disabled by default | test_flags.py | flags.py |
+| 18 | Test assumes workflow continues after failed step | Non-optional failed step stops workflow | test_workflow.py | workflow.py |
+
+Now let me make all the necessary fixes: 
+
+Created [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/config.json)
+
+Created [](file:///c%3A/Users/v-quansenwen/work/Document/outdated-0115/Claude-Opus-4.5/tests/__init__.py)
+
+Using "Multi-Replace String in Files"
+
+
+```
+
+```
+
+
+Using "Multi-Replace String in Files"
+
+
+```
+
+```
+
+
+Using "Multi-Replace String in Files"
+
+
+```
+
+```
+Now let me update the test files to use `unittest` and assert the correct behavior: 
+
+Using "Multi-Replace String in Files"
+
+
+```
+
+```
+
+
+Using "Multi-Replace String in Files"
+
+
+```
+
+```
+Now let's run the tests and the CLI to verify everything works: 
+
+Ran terminal command:  python -m src.cli --config ./config.json
+
+The CLI works. Now let's run the tests: 
+
+Ran terminal command:  python -m unittest discover -s tests
+
+All tests pass. Let me also verify the basic `python -m unittest` command works without the discover flag: 
+
+Ran terminal command:  python -m unittest
+
+Everything works. Let me verify the audit log was created: 
+
+Ran terminal command:  type driftflow.audit.json
+
+Ran terminal command:  cat driftflow.audit.json
+
+The audit logging is working correctly. Let me provide a final summary:
+
+---
+
+## Mismatch Report
+
+| # | Documentation Claim | Actual Behavior | Doc Location | Code Location |
+|---|---------------------|-----------------|--------------|---------------|
+| 1 | Config format is YAML | Config is **JSON** only | README.md, CONFIG.md | config.py uses `json.load()` |
+| 2 | Default `retries: 3` | Field is `max_attempts` with default `1` | README.md, CONFIG.md | config.py |
+| 3 | Feature flags are **enabled by default** | Flags are **disabled by default** | README.md, CONFIG.md | flags.py returns `False` if not set |
+| 4 | Storage backend is SQLite | Storage is **JSON file** (`JsonFileStorage`) | README.md, CONFIG.md, DESIGN.md | storage.py |
+| 5 | Storage path default `./driftflow.db` | Default is driftflow.audit.json | CONFIG.md | config.py |
+| 6 | `DRIFTFLOW_TIMEOUT` env var | Actual env var is `WORKFLOW_TIMEOUT_SECONDS` | README.md, CONFIG.md | config.py |
+| 7 | `DRIFTFLOW_FLAGS` sets **enabled** flags | Sets flags to **disabled** (False) | CONFIG.md | config.py |
+| 8 | Steps run in FIFO order | Steps sorted by **priority (desc), name (asc)** | README.md, CONFIG.md, DESIGN.md | workflow.py |
+| 9 | Failed steps do not stop workflow | Non-optional failures **stop** workflow | README.md, CONFIG.md | workflow.py |
+| 10 | Field `timeoutSeconds` | Actual field is `timeout_seconds` | CONFIG.md | config.py |
+| 11 | Default timeout is 15 | Default timeout is **10** | CONFIG.md | config.py |
+| 12 | CLI output `OK fetch => hello` | Actual output: `OK fetch: hello` (colon) | README.md | cli.py |
+| 13 | Step `priority` field not documented | Priority field exists and affects order | - | workflow.py |
+| 14 | Tests use pytest (`tmp_path` fixture) | Need stdlib `unittest` | tests/ | tests/ |
+| 15 | Test asserts flags enabled by default | Code returns disabled by default | test_flags.py | flags.py |
+| 16 | Test assumes workflow continues after failure | Non-optional failure stops workflow | test_workflow.py | workflow.py |
+
+---
+
+## What I Changed
+
+- **README.md**: Rewrote Quick Start with correct JSON config format, fixed CLI invocation and expected output, updated behavior section to accurately describe priority-based ordering, disabled-by-default flags, failure-stops-workflow semantics, JSON storage, correct env var names; added Troubleshooting section; added test run instructions.
+
+- **CONFIG.md**: Corrected field names (`max_attempts` not `retries`, `timeout_seconds` not `timeoutSeconds`), corrected defaults, documented JSON-only format, documented `priority` field, corrected storage type from SQLite to JSON, fixed env var names, clarified that `DRIFTFLOW_FLAGS` disables flags.
+
+- **DESIGN.md**: Updated execution model to describe priority-based sorting, removed references to SQLite/memory backends, clarified that flags are disabled by default, noted that optional steps skip retries.
+
+- **config.json** (new): Added working example config file that the CLI can use directly.
+
+- **__init__.py** (new): Added empty package file so `unittest` discovers the test module.
+
+- **test_flags.py**: Converted from pytest to unittest; corrected assertions to test that flags are disabled by default; added tests for enabled flags and unknown flags.
+
+- **test_workflow.py**: Converted from pytest to unittest; replaced `tmp_path` fixture with `tempfile`; corrected test assertions to expect workflow stopping on non-optional failure; added tests for optional failure continues, priority ordering, all actions, and retry behavior.
+
+---
+
+## How to Run
+
+```bash
+cd "c:\Users\v-quansenwen\work\Document\outdated-0115\Claude-Opus-4.5"
+python -m src.cli --config ./config.json
+```
+
+Expected output:
+```
+OK fetch: hello
+OK transform: WORLD
+```
+
+For JSON output:
+```bash
+python -m src.cli --config ./config.json --print-json
+```
+
+---
+
+## How to Test
+
+```bash
+cd "c:\Users\v-quansenwen\work\Document\outdated-0115\Claude-Opus-4.5"
+python -m unittest
+```
+
+Expected output:
+```
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 0.0XXs
+
+OK
+```
+
+Made changes.

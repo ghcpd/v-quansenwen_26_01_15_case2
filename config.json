@@ -1,0 +1,16 @@
+{
+  "name": "demo",
+  "steps": [
+    {"name": "fetch", "action": "echo", "input": "hello", "priority": 1},
+    {"name": "transform", "action": "upper", "input": "world", "priority": 0}
+  ],
+  "flags": {
+    "audit": true,
+    "metrics": true
+  },
+  "storage": {
+    "type": "json",
+    "path": "./driftflow.audit.json"
+  },
+  "max_attempts": 3
+}
