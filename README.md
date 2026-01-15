@@ -1,67 +1,73 @@
 # DriftFlow
 
-DriftFlow is a lightweight workflow/task execution service used by internal teams to orchestrate small data-processing jobs. It loads a config file, evaluates feature flags, and runs a sequence of steps with retries.
+DriftFlow is a lightweight workflow/task execution service used to orchestrate small jobs. It loads a JSON config file, applies feature flags, and runs steps with simple auditing.
 
 ## Quick start
 
-1. Create a config file (YAML):
+1) Create `config.json` in the repo root (see the checked-in example):
 
-```yaml
-name: "demo"
-steps:
-  - name: "fetch"
-    action: "echo"
-    input: "hello"
-  - name: "transform"
-    action: "upper"
-    input: "world"
-flags:
-  audit: true
-  metrics: true
-storage:
-  type: sqlite
-  path: "./driftflow.db"
-retries: 3
+```json
+{
+  "name": "demo",
+  "steps": [
+    {"name": "fetch", "action": "echo", "input": "hello"},
+    {"name": "transform", "action": "upper", "input": "world", "priority": 1}
+  ],
+  "flags": {"audit": true},
+  "storage": {"path": "./driftflow.audit.json"},
+  "max_attempts": 2,
+  "timeout_seconds": 10
+}
 ```
 
-2. Run the workflow:
+2) Run the workflow:
 
 ```bash
-python -m src.cli --config ./config.yml
+python -m src.cli --config ./config.json
 ```
 
 Expected output:
 
 ```
-OK fetch => hello
-OK transform => WORLD
+OK transform: WORLD
+OK fetch: hello
 ```
 
 ## Behavior
 
-- Steps execute in **FIFO** order as they appear in the config.
-- Retries are enabled by default and can be configured via `retries` (default: 3).
-- Feature flags are **enabled by default** and can be overridden in the config.
-- `audit` logging is on by default and writes to the configured storage backend.
-- Storage uses SQLite by default and will create the database file if missing.
-- Failed steps are logged and **do not stop** the workflow.
-- `DRIFTFLOW_TIMEOUT` controls the per-step timeout in seconds.
+- Steps are ordered by `priority` (higher first) then by `name` alphabetically; not strictly FIFO.
+- `max_attempts` controls retries for non-optional steps (default: 1); optional steps always run once.
+- A non-optional failure stops the workflow; optional steps may fail without stopping.
+- Feature flags default to disabled. Only `audit`, `metrics`, and `parallel` are recognized; unknown flags are treated as off.
+- The `DRIFTFLOW_FLAGS` environment variable disables listed flags (e.g., `DRIFTFLOW_FLAGS=audit,metrics`).
+- Audit writes append-only JSON lines to the configured path; storage uses a local file, not SQLite.
+- `WORKFLOW_TIMEOUT_SECONDS` overrides `timeout_seconds` in the loaded config.
+- `run_workflow()` returns `status: "ok"` only when all steps succeed.
 
 ## Configuration
 
-See [CONFIG.md](CONFIG.md) for all options.
+See [CONFIG.md](CONFIG.md) for full options and environment overrides.
 
 ## Programmatic usage
 
 ```python
 from src.api import run_workflow
 
-result = run_workflow("./config.yml")
-print(result["status"])  # "ok"
+result = run_workflow("./config.json")
+print(result["status"])  # "ok" when all steps succeed
 ```
+
+## Troubleshooting / Common gotchas
+
+- Config must be JSON; YAML is not supported by the loader.
+- Flags are off by default; set `"audit": true` to enable auditing.
+- `DRIFTFLOW_FLAGS` only disables flags, even if the config enables them.
+- Use `max_attempts`, not `retries`; missing or zero values mean one attempt.
+- Non-optional failures stop later steps; make a step optional to continue after its failure.
+- Step order changes with `priority`; equal priorities fall back to alphabetical `name` order.
 
 ## Project layout
 
 - src/: implementation
-- tests/: (some coverage; may be outdated)
-- DESIGN.md: high-level architecture notes
+- tests/: stdlib `unittest` coverage
+- DESIGN.md: architecture notes
