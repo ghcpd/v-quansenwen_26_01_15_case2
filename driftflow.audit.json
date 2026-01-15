@@ -1,0 +1,4 @@
+{"step": "fetch", "action": "echo", "ok": true, "ts": 1768460898}
+{"step": "transform", "action": "upper", "ok": true, "ts": 1768460898}
+{"step": "fetch", "action": "echo", "ok": true, "ts": 1768462517}
+{"step": "transform", "action": "upper", "ok": true, "ts": 1768462517}
